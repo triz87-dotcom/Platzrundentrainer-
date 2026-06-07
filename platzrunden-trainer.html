@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Platzrunden-Trainer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=JetBrains+Mono:wght@400;700;800&display=swap');
+
+  :root {
+    --bg: #0a0e14;
+    --panel: #11161f;
+    --line: #1e2733;
+    --amber: #ffb000;
+    --amber-dim: #7a5400;
+    --green: #2ce67e;
+    --red: #ff4d4d;
+    --ink: #d6e0ea;
+    --muted: #5d6b7a;
+    --cyan: #36c5d8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle at 50% -20%, rgba(255,176,0,0.08), transparent 60%),
+      repeating-linear-gradient(0deg, transparent 0 39px, rgba(255,255,255,0.012) 39px 40px);
+    color: var(--ink);
+    font-family: 'Oswald', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .unit {
+    width: 100%;
+    max-width: 460px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.03);
+    overflow: hidden;
+  }
+
+  header {
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    background: linear-gradient(180deg, rgba(255,176,0,0.05), transparent);
+  }
+  header h1 {
+    font-size: 15px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--amber);
+  }
+  header .sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  .scoreboard {
+    display: flex;
+    border-bottom: 1px solid var(--line);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .score {
+    flex: 1;
+    padding: 12px;
+    text-align: center;
+    border-right: 1px solid var(--line);
+  }
+  .score:last-child { border-right: none; }
+  .score .num { font-size: 22px; font-weight: 800; }
+  .score .lbl { font-size: 9px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-top: 2px; }
+  .score.ok .num { color: var(--green); }
+  .score.bad .num { color: var(--red); }
+  .score.streak .num { color: var(--amber); }
+
+  .display {
+    padding: 32px 22px 26px;
+    text-align: center;
+  }
+  .qfu-row {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin-bottom: 22px;
+    text-transform: uppercase;
+  }
+  .qfu-row b {
+    display: block;
+    color: var(--cyan);
+    font-weight: 800;
+    font-size: 40px;
+    letter-spacing: 2px;
+    margin-top: 6px;
+  }
+  .leg {
+    font-weight: 600;
+    font-size: 34px;
+    letter-spacing: 1px;
+    color: var(--amber);
+    text-transform: uppercase;
+    line-height: 1.15;
+  }
+  .turn-tag {
+    display: inline-block;
+    margin-top: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .turn-tag.left { color: var(--cyan); border-color: rgba(54,197,216,0.3); }
+  .turn-tag.right { color: var(--amber); border-color: var(--amber-dim); }
+
+  .answer { padding: 8px 22px 22px; }
+  .answer input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 30px;
+    color: var(--ink);
+    letter-spacing: 4px;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .answer input::placeholder { color: #2c3744; letter-spacing: 4px; }
+  .answer input:focus { border-color: var(--amber-dim); box-shadow: 0 0 0 3px rgba(255,176,0,0.08); }
+  .answer input.flash-ok { border-color: var(--green); box-shadow: 0 0 0 3px rgba(44,230,126,0.15); }
+  .answer input.flash-bad { border-color: var(--red); box-shadow: 0 0 0 3px rgba(255,77,77,0.15); }
+
+  .feedback {
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 1px;
+    min-height: 20px;
+    padding: 0 22px 16px;
+    color: var(--muted);
+  }
+  .feedback.ok { color: var(--green); }
+  .feedback.bad { color: var(--red); }
+
+  .controls {
+    display: flex;
+    gap: 10px;
+    padding: 0 22px 22px;
+  }
+  button {
+    flex: 1;
+    font-family: 'Oswald', sans-serif;
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 500;
+    padding: 13px;
+    border-radius: 9px;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    color: var(--ink);
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+  }
+  button:hover { border-color: var(--amber-dim); }
+  button.primary { background: var(--amber); color: #1a1200; border-color: var(--amber); font-weight: 600; }
+  button.primary:hover { background: #ffc233; }
+
+  .numpad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding: 0 22px 22px;
+  }
+  .numpad .key {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    padding: 16px 0;
+    border-radius: 9px;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    color: var(--ink);
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: background .1s;
+  }
+  .numpad .key:active { background: rgba(255,176,0,0.18); }
+  .numpad .key.wide { font-size: 13px; letter-spacing: 1px; text-transform: uppercase; font-family: 'Oswald', sans-serif; }
+  .numpad .key.del { color: var(--red); }
+  .numpad .key.enter { background: var(--amber); color: #1a1200; border-color: var(--amber); font-weight: 600; }
+
+  .legend {
+    border-top: 1px solid var(--line);
+    padding: 16px 22px 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    line-height: 1.7;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+  }
+  .legend b { color: var(--ink); font-weight: 700; }
+</style>
+</head>
+<body>
+  <div class="unit">
+    <header>
+      <h1>Platzrunde</h1>
+      <span class="sub">QFU → STEUERKURS</span>
+    </header>
+
+    <div class="scoreboard">
+      <div class="score ok"><div class="num" id="sOk">0</div><div class="lbl">Richtig</div></div>
+      <div class="score bad"><div class="num" id="sBad">0</div><div class="lbl">Falsch</div></div>
+      <div class="score streak"><div class="num" id="sStreak">0</div><div class="lbl">Serie</div></div>
+    </div>
+
+    <div class="display">
+      <div class="qfu-row">PISTENRICHTUNG <b id="qfu">150°</b></div>
+      <div class="leg" id="legName">Gegenanflug</div>
+      <span class="turn-tag" id="turnTag">Linksrunde</span>
+    </div>
+
+    <div class="answer">
+      <input id="ans" type="text" inputmode="none" maxlength="3" placeholder="___" autocomplete="off" readonly>
+    </div>
+
+    <div class="feedback" id="fb">Steuerkurs eingeben und auf Prüfen tippen</div>
+
+    <div class="numpad" id="numpad">
+      <div class="key" data-k="1">1</div>
+      <div class="key" data-k="2">2</div>
+      <div class="key" data-k="3">3</div>
+      <div class="key" data-k="4">4</div>
+      <div class="key" data-k="5">5</div>
+      <div class="key" data-k="6">6</div>
+      <div class="key" data-k="7">7</div>
+      <div class="key" data-k="8">8</div>
+      <div class="key" data-k="9">9</div>
+      <div class="key del wide" data-k="del">Löschen</div>
+      <div class="key" data-k="0">0</div>
+      <div class="key enter wide" data-k="enter">Prüfen</div>
+    </div>
+
+    <div class="controls">
+      <button id="skipBtn">Überspringen</button>
+    </div>
+
+    <div class="legend">
+      <b>Linksrunde</b> — Querabflug QFU −90 · Gegenanflug +180 · Queranflug +90<br>
+      <b>Rechtsrunde</b> — Querabflug QFU +90 · Gegenanflug +180 · Queranflug −90<br>
+      <span style="color:var(--muted)">Ohne Zusatz = Linksrunde (Standard)</span>
+    </div>
+  </div>
+
+<script>
+(function(){
+  const qfuEl = document.getElementById('qfu');
+  const legName = document.getElementById('legName');
+  const turnTag = document.getElementById('turnTag');
+  const ans = document.getElementById('ans');
+  const fb = document.getElementById('fb');
+  const skipBtn = document.getElementById('skipBtn');
+  const numpad = document.getElementById('numpad');
+  const sOk = document.getElementById('sOk');
+  const sBad = document.getElementById('sBad');
+  const sStreak = document.getElementById('sStreak');
+
+  // Linksplatzrunde = Standard. Drehrichtung der Runde bestimmt das Vorzeichen.
+  // Querabflug (crosswind) nach dem Start, Queranflug (base) vor der Landung.
+  const legs = [
+    { name:'Querabflug',         delta:-90, turn:'left',  tag:'Linksrunde' },
+    { name:'Gegenanflug',        delta:180, turn:'left',  tag:'Linksrunde' },
+    { name:'Queranflug',         delta:+90, turn:'left',  tag:'Linksrunde' },
+    { name:'rechter Querabflug', delta:+90, turn:'right', tag:'Rechtsrunde' },
+    { name:'rechter Gegenanflug',delta:180, turn:'right', tag:'Rechtsrunde' },
+    { name:'rechter Queranflug', delta:-90, turn:'right', tag:'Rechtsrunde' }
+  ];
+
+  let state = { ok:0, bad:0, streak:0, answer:0, answered:false };
+
+  function pad(n){ return String(n).padStart(3,'0'); }
+  function norm(deg){ deg = deg % 360; if (deg <= 0) deg += 360; return deg; }
+
+  function newQuestion(){
+    const baseRaw = (Math.floor(Math.random()*36)) * 10;
+    const qfu = baseRaw === 0 ? 360 : baseRaw;
+    const leg = legs[Math.floor(Math.random()*legs.length)];
+
+    state.answer = norm(qfu + leg.delta);
+    state.answered = false;
+
+    qfuEl.textContent = pad(qfu) + '°';
+    legName.textContent = leg.name;
+    turnTag.textContent = leg.tag;
+    turnTag.className = 'turn-tag ' + (leg.turn === 'right' ? 'right' : 'left');
+
+    ans.value = '';
+    ans.className = '';
+    fb.textContent = 'Steuerkurs eingeben';
+    fb.className = 'feedback';
+  }
+
+  function check(){
+    if (state.answered) { newQuestion(); return; }
+    const val = ans.value.trim();
+    if (val === '') { return; }
+    const num = norm(parseInt(val,10));
+    if (num === state.answer){
+      state.answered = true;
+      state.ok++; state.streak++;
+      fb.textContent = '✓ Korrekt — ' + pad(state.answer) + '°';
+      fb.className = 'feedback ok';
+      ans.className = 'flash-ok';
+      render();
+      setTimeout(newQuestion, 650);
+    } else {
+      state.answered = true;
+      state.bad++; state.streak = 0;
+      fb.textContent = '✗ Richtig wäre ' + pad(state.answer) + '° — nochmal tippen für weiter';
+      fb.className = 'feedback bad';
+      ans.className = 'flash-bad';
+      render();
+    }
+  }
+
+  function skip(){ state.streak = 0; render(); newQuestion(); }
+
+  function render(){
+    sOk.textContent = state.ok;
+    sBad.textContent = state.bad;
+    sStreak.textContent = state.streak;
+  }
+
+  function press(k){
+    if (k === 'enter'){ check(); return; }
+    if (state.answered){ return; } // require new question via enter/skip after answer
+    if (k === 'del'){
+      ans.value = ans.value.slice(0, -1);
+      return;
+    }
+    if (ans.value.length < 3){
+      ans.value += k;
+    }
+  }
+
+  // Tap-safe binding: pointerup covers mouse + touch in one event, no 300ms delay,
+  // and avoids the WhatsApp in-app browser's flaky click handling.
+  function bindTap(el, fn){
+    let handled = false;
+    el.addEventListener('pointerup', e => { handled = true; e.preventDefault(); fn(); });
+    el.addEventListener('click', e => { if (handled){ handled = false; return; } fn(); });
+  }
+
+  numpad.querySelectorAll('.key').forEach(key => {
+    bindTap(key, () => press(key.dataset.k));
+  });
+  bindTap(skipBtn, skip);
+
+  // Hardware keyboard still works when available
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter'){ check(); }
+    else if (e.key === 'Backspace'){ press('del'); }
+    else if (/^[0-9]$/.test(e.key)){ press(e.key); }
+  });
+
+  newQuestion();
+  render();
+})();
+</script>
+</body>
+</html>
